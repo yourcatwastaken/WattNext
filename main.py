@@ -30,7 +30,7 @@ try:
                     break
 
             if target_index is None:
-                print(f"Error: Could not find queue '{user_queue}' on the page.")
+                print(f'Error: Could not find queue {user_queue} on the page.')
                 time.sleep(600)
                 continue
 
