@@ -1,0 +1,7 @@
+{
+  "data": {
+    "queue": "",
+    "use_sound": true,
+    "alert_threshold_mins": 60
+  }
+}

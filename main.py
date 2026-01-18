@@ -3,10 +3,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-import time
 from datetime import datetime, timedelta
-
-user_queue = str(input('Enter your queue: '))
+import time
+import winsound
+import json
 
 options = Options()
 options.add_argument('--headless=new')
@@ -16,7 +16,13 @@ try:
     while True:
         try:
             now = datetime.now()
-            print(f'Checking schedule at: {now.strftime('%H:%M')}')
+            print(f"Checking schedule at: {now.strftime('%H:%M')}")
+
+            with open('config.json') as file:
+                config_data = json.load(file)
+            user_queue = config_data['data'].get('queue', '1.1')
+            sound_enabled = config_data['data']['use_sound']
+            alert_window = config_data['data'].get('alert_threshold_mins', 60)
 
             driver.get('https://off.energy.mk.ua/')
             wait = WebDriverWait(driver, timeout=15)
@@ -56,12 +62,14 @@ try:
                         if outage_time <= now < end_time:
                             h, m = divmod(int(minutes_until_end), 60)
                             time_text = f'{h}h {m}m' if h > 0 else f'{m}m'
-                            print(f'!!! STATUS: Power is currently off. Ends in {time_text} minutes (at {end_time_str}) !!!')
+                            print(f'!!! STATUS: Power is currently off. Ends in {time_text} (at {end_time_str}) !!!')
                             break
-                        elif 0 < minutes_until_start <= 60:
+                        elif 0 < minutes_until_start <= alert_window:
                             print(f'!!! ALERT: Outage starting in {int(minutes_until_start)} minutes (at {start_time_str}) !!!')
+                            if sound_enabled:
+                                for i in range(5):
+                                    winsound.Beep(1500, 500)
                             break
-
             time.sleep(600)
 
         except Exception as E:
