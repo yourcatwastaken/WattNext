@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 chromedriver
 chromedriver.exe
+outage.log

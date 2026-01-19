@@ -3,10 +3,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+
 from datetime import datetime, timedelta
-import time
-import winsound
-import json
+import time, winsound, json, logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename='outage.log', level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler())
 
 options = Options()
 options.add_argument('--headless=new')
@@ -35,7 +38,7 @@ try:
     while True:
         try:
             current_time = datetime.now()
-            print(f"Checking schedule at: {current_time.strftime('%H:%M')}")
+            logger.info(f"Checking schedule at: {current_time.strftime('%H:%M')}")
 
             with open('config.json') as file:
                 config_data = json.load(file)
@@ -51,11 +54,11 @@ try:
             for index, header in enumerate(schedule_queue):
                 if user_queue in header.text:
                     target_index = index
-                    print(f'Requested queue located at column index: {target_index}')
+                    logger.info(f'Requested queue located at column index: {target_index}')
                     break
 
             if target_index is None:
-                print(f'Error: Could not find queue {user_queue} on the page.')
+                logger.error(f'Error: Could not find queue {user_queue} on the page.')
                 time.sleep(60)
                 continue
 
@@ -70,19 +73,19 @@ try:
                         if out_ts <= current_time < end_ts:
                             h, m = divmod(int(m_end), 60)
                             time_text = f'{h}h {m}m' if h > 0 else f'{m}m'
-                            print(f'!!! STATUS: Power is currently off. Ends in {time_text} (at {end_str}) !!!')
+                            logger.info(f'!!! STATUS: Power is currently off. Ends in {time_text} (at {end_str}) !!!')
                             break
                         elif 0 < m_start <= alert_window:
-                            print(f'!!! ALERT: Outage starting in {int(m_start)} minutes (at {start_str}) !!!')
+                            logger.info(f'!!! ALERT: Outage starting in {int(m_start)} minutes (at {start_str}) !!!')
                             if sound_enabled:
                                 alert_sound()
                             break
             time.sleep(600)
 
         except Exception as E:
-            print(f'Error: {E}. Retrying in 60s...')
+            logger.error(f'Error: {E}. Retrying in 60s...')
             time.sleep(60)
 
 finally:
-    print('Closing browser...')
+    logger.info('Closing browser...')
     driver.quit()
