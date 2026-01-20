@@ -10,6 +10,7 @@ import time, winsound, json, logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename='outage.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
+logging.getLogger("urllib3").setLevel(logging.ERROR)
 
 options = Options()
 options.add_argument('--headless=new')
@@ -42,7 +43,7 @@ try:
 
             with open('config.json') as file:
                 config_data = json.load(file)
-            user_queue = config_data['data'].get('queue', '1.1')
+            user_queue = config_data['data'].get('queue') or '1.1'
             sound_enabled = config_data['data']['use_sound']
             alert_window = config_data['data'].get('alert_threshold_mins', 60)
 
@@ -52,9 +53,9 @@ try:
             target_index = None
             schedule_queue = wait.until(EC.visibility_of_all_elements_located((By.TAG_NAME, 'th')))
             for index, header in enumerate(schedule_queue):
-                if user_queue in header.text:
+                if user_queue and user_queue in header.text:
                     target_index = index
-                    logger.info(f'Requested queue located at column index: {target_index}')
+                    logger.info(f'Requested queue {user_queue} located at column index: {target_index}')
                     break
 
             if target_index is None:
