@@ -6,6 +6,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from datetime import datetime, timedelta
 import time, winsound, json, logging
+from plyer import notification
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename='outage.log', level=logging.INFO)
@@ -29,11 +30,30 @@ def calculate_outage_times(time_range, current_time):
     mins_until_end = (end_time - current_time).total_seconds() / 60
     return outage_time, end_time, mins_until_start, mins_until_end, start_time_str, end_time_str
 
-
 def alert_sound():
     for _ in range(5):
         winsound.Beep(1500, 500)
 
+def send_notification(type, m_str, time_str):
+    if type == 'soon':
+        title = 'Power outage soon!'
+        message = f'Outage starting in {int(m_str)} minutes (at {time_str}) !!!'
+    elif type == 'active':
+        title = 'Power is currently off!'
+        message = f'Outage ends in {m_str} (at {time_str}) !!!'
+
+    notification.notify(
+        title = title,
+        message = message,
+        app_name = 'Outage alerts',
+        app_icon = None,
+        timeout = 10
+    )
+    return message
+
+last_notif_time = datetime.min
+last_known_end_time = ''
+last_alerted_slot = ''
 
 try:
     while True:
@@ -45,7 +65,7 @@ try:
                 config_data = json.load(file)
             user_queue = config_data['data'].get('queue') or '1.1'
             sound_enabled = config_data['data']['use_sound']
-            alert_window = config_data['data'].get('alert_threshold_mins', 60)
+            alert_window = config_data['data'].get('alert_threshold_mins') or 60
 
             driver.get('https://off.energy.mk.ua/')
             wait = WebDriverWait(driver, timeout=15)
@@ -74,10 +94,20 @@ try:
                         if out_ts <= current_time < end_ts:
                             h, m = divmod(int(m_end), 60)
                             time_text = f'{h}h {m}m' if h > 0 else f'{m}m'
-                            logger.info(f'!!! STATUS: Power is currently off. Ends in {time_text} (at {end_str}) !!!')
+                            schedule_changed = (end_str != last_known_end_time)
+                            active_notif_enabled = config_data['data'].get('notifs_during_outage', True)
+                            interval = config_data['data'].get('outage_notifs_interval_mins') or 60
+                            since_last = (current_time - last_notif_time).total_seconds() / 60
+                            if schedule_changed or (active_notif_enabled and since_last >= interval):
+                                msg = send_notification('active', time_text, end_str)
+                                logger.info(f"{'SCHEDULE CHANGE!' if schedule_changed else ''} Sent notification: {msg}")
+                                last_notif_time = current_time
+                                last_known_end_time = end_str
                             break
-                        elif 0 < m_start <= alert_window:
-                            logger.info(f'!!! ALERT: Outage starting in {int(m_start)} minutes (at {start_str}) !!!')
+                        elif 0 < m_start <= alert_window and time_range != last_alerted_slot:
+                            last_alerted_slot = time_range
+                            msg = send_notification('soon', m_start, start_str)
+                            logger.info(f'Sent notification: {msg}')
                             if sound_enabled:
                                 alert_sound()
                             break
