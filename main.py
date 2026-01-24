@@ -5,13 +5,31 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
 from datetime import datetime, timedelta
-import time, winsound, json, logging
+import time, winsound, json, logging, os
 from plyer import notification
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', filename='outage.log', level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
-logging.getLogger("urllib3").setLevel(logging.ERROR)
+logging.getLogger('urllib3').setLevel(logging.ERROR)
+
+
+def config():
+    if not os.path.exists('config.json'):
+        default_config = {
+            "data": {
+                "queue": "1.1",
+                "use_sound": True,
+                "alert_threshold_mins": 60,
+                "notifs_during_outage": True,
+                "outage_notifs_interval_mins": 60
+            }
+        }
+        with open('config.json', 'w') as f:
+            json.dump(default_config, f, indent=4)
+        logger.info('Created default config.json. Please edit it to your preferences.')
+
+config()
 
 options = Options()
 options.add_argument('--headless=new')
@@ -106,6 +124,7 @@ try:
                             break
                         elif 0 < m_start <= alert_window and time_range != last_alerted_slot:
                             last_alerted_slot = time_range
+                            last_known_end_time = end_str
                             msg = send_notification('soon', m_start, start_str)
                             logger.info(f'Sent notification: {msg}')
                             if sound_enabled:

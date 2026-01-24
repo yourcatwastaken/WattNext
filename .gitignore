@@ -2,6 +2,13 @@
 .idea/
 __pycache__/
 *.pyc
+
 chromedriver
 chromedriver.exe
-outage.log
+
+*.log
+config.json
+
+dist/
+build/
+*.spec
