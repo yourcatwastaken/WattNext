@@ -1,9 +1,0 @@
-{
-  "data": {
-    "queue": "",
-    "use_sound": true,
-    "alert_threshold_mins": 60,
-    "notifs_during_outage": true,
-    "outage_notifs_interval_mins": 60
-  }
-}
